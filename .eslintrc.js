@@ -21,5 +21,8 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     '@typescript-eslint/no-explicit-any': 'off',
+    "arrow-spacing": [ "warn", { "before": true, "after": true } ],
+    "comma-spacing": [ "warn", { "before": false, "after": true } ],
+    "key-spacing": [ "warn", { "afterColon": true } ],
   },
 };
