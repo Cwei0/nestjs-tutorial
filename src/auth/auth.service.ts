@@ -1,12 +1,22 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
-import { DataService } from 'src/data/data.service';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthDto } from './dto';
 import { hash, verify } from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { DataService } from 'src/data/data.service';
 
 @Injectable({})
 export class AuthService {
-  constructor(private data: DataService) {}
+  constructor(
+    private data: DataService,
+    private jwt: JwtService,
+    private config: ConfigService,
+  ) {}
   async signup(dto: AuthDto) {
     const hashPwd = await hash(dto.password);
     try {
@@ -16,18 +26,33 @@ export class AuthService {
           hash: hashPwd,
         },
       });
-      delete user.hash;
-      // return saved user
-      return user;
+      return this.signToken(user.id, user.email);
     } catch (error) {
       if (
-        error instanceof PrismaClientKnownRequestError &&
+        error instanceof PrismaClientKnownRequestError ||
         error.code === 'P2002'
       ) {
         throw new ForbiddenException('Credentials Taken!');
       }
       throw error;
     }
+  }
+
+  async signToken(
+    userId: number,
+    email: string,
+  ): Promise<{ access_token: string }> {
+    const payload = {
+      sub: userId,
+      email,
+    };
+    const token = await this.jwt.signAsync(payload, {
+      expiresIn: '15m',
+      secret: this.config.get('JWT_SECRET'),
+    });
+    return {
+      access_token: token,
+    };
   }
 
   async login(dto: AuthDto) {
@@ -42,9 +67,8 @@ export class AuthService {
     // compare password
     const pwdMatches = verify(user.hash, dto.password);
     // Guard statement for incorrect password
-    if (!pwdMatches) throw new ForbiddenException('Credentials incorrect!');
+    if (!pwdMatches) throw new UnauthorizedException();
     // send the user
-    delete user.hash;
-    return user;
+    return this.signToken(user.id, user.email);
   }
 }

@@ -1,3 +1,3 @@
-import { AuthDto } from './auth.dto';
+import { AuthDto, signUpDto } from './auth.dto';
 
-export { AuthDto };
+export { AuthDto, signUpDto };
